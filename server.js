@@ -6,7 +6,8 @@ const db = mysql.createConnection({
     host: "localhost",
     user: "root",
     password: "",
-    database: "invoices"
+    database: "invoices",
+    multipleStatements: true //allows multiple operations in the same query, disabled by default for security reasons
 });
 
 db.connect((err) => {
@@ -48,8 +49,8 @@ app.get("/api/invoices", (request, response) => {
 });
 
 app.post("/api/invoices/add", (request, response) => {
-    const invoice = request.body;//.invoice;
-    console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" + request.body.invoice)
+    const invoice = request.body;
+
     const ordersSql = `
         INSERT INTO orders(
             ORD_NUM,
@@ -64,7 +65,7 @@ app.post("/api/invoices/add", (request, response) => {
             ${invoice.order},
             ${invoice.amount},
             0,
-            ${invoice.date},
+            "${invoice.date}",
             "C00000",
             "A000",
             "${invoice.status}"
@@ -101,22 +102,20 @@ app.post("/api/invoices/add", (request, response) => {
         );
     `;
 
-    console.log("############################\n##################################\n###################################\n" + ordersSql);
-    db.query(ordersSql, (err, result) => {
+    console.log("############################\n##################################\n###################################\n" + ordersSql + customerSql);
+    // db.query(ordersSql, (err, result) => {
+    //     if(err) throw err;
+    //     response.send(result);
+    // });
+    // db.query(customerSql, (err, result) => {
+    //     if(err) throw err;
+    //     response.send(result);
+    //     return;
+    // });
+    db.query(ordersSql + customerSql, (err, result) => {
         if(err) throw err;
-        response.send(result)
+        response.send(result);
     });
-    db.query(customerSql, (err, result) => {
-        if(err) throw err;
-        response.send(result)
-    });
-    // orders.ORD_DATE = ${invoice.date}
-    // orders.ORD_AMOUNT = ${invoice.amount}
-    // orders.ORD_DESCRIPTION = ${invoice.status}
-    // customer.CUST_NAME = ${invoice.name} 
-    // customer.CUST_COUNTRY = ${invoice.country} 
-    // customer.CUST_CITY = ${invoice.city} 
-    // customer.PHONE_NO = ${invoice.phone}
 
 });
 
