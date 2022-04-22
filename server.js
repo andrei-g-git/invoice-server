@@ -37,7 +37,8 @@ app.get("/api/invoices", (request, response) => {
             customer.CUST_NAME,
             customer.CUST_COUNTRY,
             customer.CUST_CITY,
-            customer.PHONE_NO 
+            customer.PHONE_NO,
+            customer.CUST_CODE 
         FROM orders, customer
         WHERE orders.CUST_CODE=customer.CUST_CODE;
     `  
@@ -66,7 +67,7 @@ app.post("/api/invoices/add", (request, response) => {
             ${invoice.amount},
             0,
             "${invoice.date}",
-            "C00000",
+            "${invoice.customerCode}",
             "A000",
             "${invoice.status}"
         );
@@ -87,7 +88,7 @@ app.post("/api/invoices/add", (request, response) => {
             AGENT_CODE
         )
         VALUES(
-            "C00000",
+            "${invoice.customerCode}",
             "${invoice.name}",
             "${invoice.city}",
             "n/a",
@@ -103,20 +104,42 @@ app.post("/api/invoices/add", (request, response) => {
     `;
 
     console.log("############################\n##################################\n###################################\n" + ordersSql + customerSql);
-    // db.query(ordersSql, (err, result) => {
-    //     if(err) throw err;
-    //     response.send(result);
-    // });
-    // db.query(customerSql, (err, result) => {
-    //     if(err) throw err;
-    //     response.send(result);
-    //     return;
-    // });
+
     db.query(ordersSql + customerSql, (err, result) => {
         if(err) throw err;
         response.send(result);
     });
 
+});
+
+app.post("/api/invoices/edit", (request, response) =>{
+    const invoice = request.body;
+
+    sql=`
+        UPDATE orders
+        SET ORD_NUM = ${invoice.order},
+            ORD_AMOUNT = ${invoice.amount},
+            ORD_DATE = "${invoice.date}",
+            CUST_CODE = "${invoice.customerCode}",
+            ORD_DESCRIPTION = "${invoice.status}"
+        WHERE 
+            ORD_NUM = ${invoice.order}
+        ;
+        UPDATE customer
+        SET CUST_CODE = "${invoice.customerCode}",	
+            CUST_NAME = "${invoice.name}",	
+            CUST_CITY = "${invoice.city}",	
+            CUST_COUNTRY = "${invoice.country}",	
+            PHONE_NO = "${invoice.phone}"	
+        WHERE
+            CUST_CODE = "${invoice.customerCode}"
+        ;
+    `;
+
+    db.query(sql, (err, result) => {
+        if(err) throw err;
+        response.send(result);
+    });
 });
 
 
