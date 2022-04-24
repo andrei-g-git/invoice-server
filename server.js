@@ -142,5 +142,20 @@ app.post("/api/invoices/edit", (request, response) =>{
     });
 });
 
+app.post("/api/invoices/delete", (request, response) =>{
+    const order = request.body;
+
+    const sql = `
+        DELETE
+        FROM orders
+        WHERE ORD_NUM = ${order}
+        ;
+    `;
+
+    db.query(sql, (err, result) => {
+        if(err) throw err;
+        response.send(result);
+    })
+})
 
 app.listen(5003, () => console.log("started on port 5003"));
