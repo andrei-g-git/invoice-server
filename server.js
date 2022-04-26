@@ -50,64 +50,97 @@ app.get("/api/invoices", (request, response) => {
 });
 
 app.post("/api/invoices/add", (request, response) => {
+
     const invoice = request.body;
 
-    const ordersSql = `
-        INSERT INTO orders(
-            ORD_NUM,
-            ORD_AMOUNT,
-            ADVANCE_AMOUNT, 
-            ORD_DATE,
-            CUST_CODE,
-            AGENT_CODE,
-            ORD_DESCRIPTION
-        )
-        VALUES(
-            ${invoice.order},
-            ${invoice.amount},
-            0,
-            "${invoice.date}",
-            "${invoice.customerCode}",
-            "A000",
-            "${invoice.status}"
-        );
-    `;
-    const customerSql = `
-        INSERT INTO customer(
-            CUST_CODE,	
-            CUST_NAME,	
-            CUST_CITY,	
-            WORKING_AREA,	
-            CUST_COUNTRY,	
-            GRADE,	
-            OPENING_AMT,	
-            RECEIVE_AMT,	
-            PAYMENT_AMT,	
-            OUTSTANDING_AMT,	
-            PHONE_NO,	
-            AGENT_CODE
-        )
-        VALUES(
-            "${invoice.customerCode}",
-            "${invoice.name}",
-            "${invoice.city}",
-            "n/a",
-            "${invoice.country}",
-            10,
-            0,
-            0,
-            0,
-            0,
-            ${invoice.phone},
-            "A000"
-        );
+    const customerCheckSql = `
+        SELECT CUST_CODE, CUST_NAME
+        FROM customer
+        ;
     `;
 
-    console.log("############################\n##################################\n###################################\n" + ordersSql + customerSql);
-
-    db.query(ordersSql + customerSql, (err, result) => {
+    db.query(customerCheckSql, (err, result) => {
         if(err) throw err;
-        response.send(result);
+        console.log("code and name: \n" +   JSON.stringify(result));
+
+        const customerNamesAndCodes = result;
+
+        let customerCode = "";
+        const existingFilteredCustomer = customerNamesAndCodes.filter(customer => customer.CUST_NAME === invoice.CUST_NAME);
+        if(existingFilteredCustomer.length){
+            customerCode = existingFilteredCustomer[0].CUST_CODE;
+        } else {
+            const number = customerNamesAndCodes.length + 1;
+            if(number <= 9){ 
+                customerCode = "C0000" + number.toString();
+            } else {
+                if(number <= 99){ 
+                    customerCode = "C000" + number.toString();
+                } else {
+                    if(number <= 999) customerCode = "C00" + number.toString();
+                }
+            }
+            
+            
+        }
+
+        const ordersSql = `
+            INSERT INTO orders(
+                ORD_NUM,
+                ORD_AMOUNT,
+                ADVANCE_AMOUNT, 
+                ORD_DATE,
+                CUST_CODE,
+                AGENT_CODE,
+                ORD_DESCRIPTION
+            )
+            VALUES(
+                ${invoice.ORD_NUM},
+                ${invoice.ORD_AMOUNT},
+                0,
+                "${getSimpleDate()}",
+                "${customerCode}",
+                "A000",
+                "${invoice.ORD_DESCRIPTION}"
+            );
+        `;
+        const customerSql = `
+            INSERT INTO customer(
+                CUST_CODE,	
+                CUST_NAME,	
+                CUST_CITY,	
+                WORKING_AREA,	
+                CUST_COUNTRY,	
+                GRADE,	
+                OPENING_AMT,	
+                RECEIVE_AMT,	
+                PAYMENT_AMT,	
+                OUTSTANDING_AMT,	
+                PHONE_NO,	
+                AGENT_CODE
+            )
+            VALUES(
+                "${customerCode}",
+                "${invoice.CUST_NAME}",
+                "${invoice.CUST_CITY}",
+                "n/a",
+                "${invoice.CUST_COUNTRY}",
+                10,
+                0,
+                0,
+                0,
+                0,
+                "${invoice.PHONE_NO}",
+                "A000"
+            );
+        `;
+
+        console.log("############################\n##################################\n###################################\n" + ordersSql + customerSql);
+
+        db.query(ordersSql + customerSql, (err, result) => {
+            if(err) throw err;
+            response.send(result);
+        });
     });
 
 });
@@ -117,22 +150,22 @@ app.post("/api/invoices/edit", (request, response) =>{
 
     sql=`
         UPDATE orders
-        SET ORD_NUM = ${invoice.order},
-            ORD_AMOUNT = ${invoice.amount},
-            ORD_DATE = "${invoice.date}",
-            CUST_CODE = "${invoice.customerCode}",
-            ORD_DESCRIPTION = "${invoice.status}"
+        SET ORD_NUM = ${invoice.ORD_NUM},
+            ORD_AMOUNT = ${invoice.ORD_AMOUNT},
+            ORD_DATE = "${getSimpleDate()}",
+            CUST_CODE = "${invoice.CUST_CODE}",
+            ORD_DESCRIPTION = "${invoice.ORD_DESCRIPTION}"
         WHERE 
-            ORD_NUM = ${invoice.order}
+            ORD_NUM = ${invoice.ORD_NUM}
         ;
         UPDATE customer
-        SET CUST_CODE = "${invoice.customerCode}",	
-            CUST_NAME = "${invoice.name}",	
-            CUST_CITY = "${invoice.city}",	
-            CUST_COUNTRY = "${invoice.country}",	
-            PHONE_NO = "${invoice.phone}"	
+        SET CUST_CODE = "${invoice.CUST_CODE}",	
+            CUST_NAME = "${invoice.CUST_NAME}",	
+            CUST_CITY = "${invoice.CUST_CITY}",	
+            CUST_COUNTRY = "${invoice.CUST_COUNTRY}",	
+            PHONE_NO = "${invoice.PHONE_NO}"	
         WHERE
-            CUST_CODE = "${invoice.customerCode}"
+            CUST_CODE = "${invoice.CUST_CODE}"
         ;
     `;
 
@@ -157,5 +190,16 @@ app.post("/api/invoices/delete", (request, response) =>{
         response.send(result);
     })
 })
+
+const getSimpleDate = () => {
+    const dateObject = new Date();
+    const year = dateObject.getUTCFullYear();
+    const month = dateObject.getUTCMonth() + 1; //starts from 0 
+    const day = dateObject.getUTCDate(); //date actually gets the day...
+    const date = year + "-" + month + "-" + day;
+    console.log(date);
+    return date;
+}
+
 
 app.listen(5003, () => console.log("started on port 5003"));
