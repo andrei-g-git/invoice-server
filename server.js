@@ -64,25 +64,38 @@ app.post("/api/invoices/add", (request, response) => {
         console.log("code and name: \n" +   JSON.stringify(result));
 
         const customerNamesAndCodes = result;
+        const customerCodes = customerNamesAndCodes.map(item => item.CUST_CODE);
+        const integerCodes = customerCodes.map(item => parseInt(item.slice(1))); //remove "C" before parsing the number
+        const max = Math.max.apply(null, integerCodes);
+        const index = integerCodes.indexOf(max);
+        const highestCustomerCode = customerCodes[index];
+        const nonZeroPart = (max).toString();
+        const newNumberString = (max + 1).toString();
+        console.log(integerCodes)
+        console.log(index)
+        console.log(customerCodes)
+        const customerCode = highestCustomerCode.replace(nonZeroPart, newNumberString); //I feel there must be a shorter way than this...
 
-        let customerCode = "";
-        const existingFilteredCustomer = customerNamesAndCodes.filter(customer => customer.CUST_NAME === invoice.CUST_NAME);
-        if(existingFilteredCustomer.length){
-            customerCode = existingFilteredCustomer[0].CUST_CODE;
-        } else {
-            const number = customerNamesAndCodes.length + 1;
-            if(number <= 9){ 
-                customerCode = "C0000" + number.toString();
-            } else {
-                if(number <= 99){ 
-                    customerCode = "C000" + number.toString();
-                } else {
-                    if(number <= 999) customerCode = "C00" + number.toString();
-                }
-            }
+        console.log("highest:  " + highestCustomerCode + "    newest:    " + customerCode);
+
+        // let customerCode = "";
+        // const existingFilteredCustomer = customerNamesAndCodes.filter(customer => customer.CUST_NAME === invoice.CUST_NAME);
+        // if(existingFilteredCustomer.length){
+        //     customerCode = existingFilteredCustomer[0].CUST_CODE;
+        // } else {
+        //     const number = customerNamesAndCodes.length + 1;
+        //     if(number <= 9){ 
+        //         customerCode = "C0000" + number.toString();
+        //     } else {
+        //         if(number <= 99){ 
+        //             customerCode = "C000" + number.toString();
+        //         } else {
+        //             if(number <= 999) customerCode = "C00" + number.toString();
+        //         }
+        //     }
             
             
-        }
+        // }
 
         const ordersSql = `
             INSERT INTO orders(
@@ -176,7 +189,7 @@ app.post("/api/invoices/edit", (request, response) =>{
 });
 
 app.post("/api/invoices/delete", (request, response) =>{
-    const order = request.body;
+    const order = request.body.order;
 
     const sql = `
         DELETE
@@ -190,6 +203,19 @@ app.post("/api/invoices/delete", (request, response) =>{
         response.send(result);
     })
 })
+
+app.get("/api/invoices/anon-stats", (request, response) => {
+    const sql = `
+        SELECT ORD_AMOUNT,
+            ORD_DATE
+        FROM orders
+        ;
+    `;
+    db.query(sql, (err, result) => {
+        if(err) throw err;
+        response.send(result);
+    });
+});
 
 const getSimpleDate = () => {
     const dateObject = new Date();
